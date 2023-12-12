@@ -45,9 +45,9 @@ def batch_upload_quarto(
               multipart_form_data[file_path] = (file_name, file_contents)
 
       if batch_count == 0:
-          res = put_with_retries(f"http://{host}/quarto/update/{quarto_id}", multipart_form_data, team_token)
+          res = put_with_retries(f"https://{host}/quarto/update/{quarto_id}", multipart_form_data, team_token)
       else:
-          res = patch_with_retries(f"http://{host}/quarto/update/{quarto_id}", multipart_form_data, team_token)
+          res = patch_with_retries(f"https://{host}/quarto/update/{quarto_id}", multipart_form_data, team_token)
 
       res.raise_for_status()
       
