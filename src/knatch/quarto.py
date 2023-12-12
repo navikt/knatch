@@ -5,6 +5,7 @@ import logging
 
 from knatch import put_with_retries, patch_with_retries
 
+logging.basicConfig(level=logging.INFO)
 
 def get_quarto_files(files: list, dirName: str = None):
   for file in os.listdir(dirName):
@@ -32,7 +33,7 @@ def batch_upload_quarto(
 
   files = []
   get_quarto_files(files)
-  logging.INFO(f"Uploading {len(files)} files in batches of {batch_size}")
+  logging.info(f"Uploading {len(files)} files in batches of {batch_size}")
   
   for batch_count in range(math.ceil(len(files) / batch_size)):
       multipart_form_data = {}
@@ -52,7 +53,7 @@ def batch_upload_quarto(
       res.raise_for_status()
       
       uploaded = end_batch if end_batch < len(files) else len(files)
-      logging.INFO(f"Uploaded {uploaded}/{len(files)} files")
+      logging.info(f"Uploaded {uploaded}/{len(files)} files")
 
 def batch_update():
     parser = argparse.ArgumentParser(description="Knatch - knada batch")
