@@ -23,16 +23,19 @@ def get_quarto_files(files: list, dirName: str = None):
 
 def batch_upload_quarto(
     quarto_id: str,
-    folder: str,
+    path: str,
     team_token: str,
     host: str = "datamarkedsplassen.intern.nav.no",
     batch_size: int = 10
 ):
-  if not os.getcwd().endswith(folder):
-      os.chdir(folder)
-
   files = []
-  get_quarto_files(files)
+  if path.endswith(".html"):
+      files.append(path)
+  else:
+    if not os.getcwd().endswith(path):
+        os.chdir(path)    
+    get_quarto_files(files)
+
   logging.info(f"Uploading {len(files)} files in batches of {batch_size}")
   
   for batch_count in range(math.ceil(len(files) / batch_size)):
@@ -58,10 +61,10 @@ def batch_upload_quarto(
 def batch_update():
     parser = argparse.ArgumentParser(description="Knatch - knada batch")
     parser.add_argument("id", type=str, help="the id of the quarto to update")
-    parser.add_argument("folder", type=str, help="the folder with files to upload")
+    parser.add_argument("path", type=str, help="path to the file or the folder with files to upload")
     parser.add_argument("token", type=str, help="the team token for authentication")
     parser.add_argument("--host", dest="host", default="datamarkedsplassen.intern.nav.no", help="the api host")
     parser.add_argument("--batch-size", dest="batch_size", default=10, help="the desired batch size")
 
     args = parser.parse_args()
-    batch_upload_quarto(args.id, args.folder, args.token, host=args.host, batch_size=int(args.batch_size))
+    batch_upload_quarto(args.id, args.path, args.token, host=args.host, batch_size=int(args.batch_size))
