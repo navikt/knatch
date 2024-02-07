@@ -26,6 +26,7 @@ def batch_upload_quarto(
     folder: str,
     team_token: str,
     host: str = "datamarkedsplassen.intern.nav.no",
+    path: str = "quarto/update",
     batch_size: int = 10
 ):
   if not os.getcwd().endswith(folder):
@@ -46,9 +47,9 @@ def batch_upload_quarto(
               multipart_form_data[file_path] = (file_name, file_contents)
 
       if batch_count == 0:
-          res = put_with_retries(f"https://{host}/quarto/update/{quarto_id}", multipart_form_data, team_token)
+          res = put_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
       else:
-          res = patch_with_retries(f"https://{host}/quarto/update/{quarto_id}", multipart_form_data, team_token)
+          res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
 
       res.raise_for_status()
       
@@ -61,7 +62,8 @@ def batch_update():
     parser.add_argument("folder", type=str, help="the folder with files to upload")
     parser.add_argument("token", type=str, help="the team token for authentication")
     parser.add_argument("--host", dest="host", default="datamarkedsplassen.intern.nav.no", help="the api host")
+    parser.add_argument("--path", dest="path", default="quarto/update", help="the api host path")
     parser.add_argument("--batch-size", dest="batch_size", default=10, help="the desired batch size")
 
     args = parser.parse_args()
-    batch_upload_quarto(args.id, args.folder, args.token, host=args.host, batch_size=int(args.batch_size))
+    batch_upload_quarto(args.id, args.folder, args.token, host=args.host, path=args.path, batch_size=int(args.batch_size))
