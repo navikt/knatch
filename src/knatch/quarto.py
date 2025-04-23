@@ -7,6 +7,8 @@ from knatch import put_with_retries, patch_with_retries
 
 logging.basicConfig(level=logging.INFO)
 
+SIZE_10_MB = 10 * 1024 * 1024
+
 
 def should_be_ignored(file: str, ignore_extensions: list) -> bool:
   for ext in ignore_extensions:
@@ -15,7 +17,7 @@ def should_be_ignored(file: str, ignore_extensions: list) -> bool:
 
   return False
 
-def get_quarto_files(files: list, dirName: str = None, ignore_extensions: list=[]):
+def get_quarto_files(files: dict, dirName: str = None, ignore_extensions: list=[]):
   for file in os.listdir(dirName):
       if should_be_ignored(file, ignore_extensions):
         continue
@@ -24,12 +26,18 @@ def get_quarto_files(files: list, dirName: str = None, ignore_extensions: list=[
           if not os.path.isfile(file):
               get_quarto_files(files, file, ignore_extensions)
           else:
-              files.append(file)
+              if os.path.getsize(file) < SIZE_10_MB:
+                files["regular_files"].append(file)
+              else:
+                files["large_files"].append(file)
       else:
           if not os.path.isfile(dirName + "/" + file):
               get_quarto_files(files, dirName + "/" + file, ignore_extensions)
           else:
-              files.append(dirName + "/" + file)
+              if os.path.getsize(dirName + "/" + file) < SIZE_10_MB:
+                files["regular_files"].append(dirName + "/" + file)
+              else:
+                files["large_files"].append(dirName + "/" + file)
 
 
 def batch_upload_quarto(
@@ -44,28 +52,51 @@ def batch_upload_quarto(
   if not os.getcwd().endswith(folder):
       os.chdir(folder)
 
-  files = []
+  files = {
+    "regular_files": [],
+    "large_files": []
+  }
   get_quarto_files(files, None, ignore_extensions)
-  logging.info(f"Uploading {len(files)} files in batches of {batch_size}")
-  for batch_count in range(math.ceil(len(files) / batch_size)):
+
+  if len(files["regular_files"]) > 0:
+    logging.info(f"Uploading {len(files['regular_files'])} regular files in batches of {batch_size}")
+    for batch_count in range(math.ceil(len(files["regular_files"]) / batch_size)):
+        multipart_form_data = {}
+        start_batch = batch_count*batch_size
+        end_batch = start_batch + batch_size
+        for file_path in files["regular_files"][start_batch:end_batch]:
+            file_name = os.path.basename(file_path)
+            with open(file_path, "rb") as file:
+                file_contents = file.read()
+                multipart_form_data[file_path] = (file_name, file_contents)
+
+        if batch_count == 0:
+            res = put_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+        else:
+            res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+
+        res.raise_for_status()
+
+        uploaded = end_batch if end_batch < len(files["regular_files"]) else len(files["regular_files"])
+        logging.info(f"Uploaded {uploaded}/{len(files['regular_files'])} regular files")
+
+  if len(files["large_files"]) > 0:
+    logging.info(f"Uploading {len(files['large_files'])} files larger than {SIZE_10_MB} bytes separately")
+    for idx, file_path in enumerate(files["large_files"]):
       multipart_form_data = {}
-      start_batch = batch_count*batch_size
-      end_batch = start_batch + batch_size
-      for file_path in files[start_batch:end_batch]:
-          file_name = os.path.basename(file_path)
-          with open(file_path, "rb") as file:
-              file_contents = file.read()
-              multipart_form_data[file_path] = (file_name, file_contents)
+      with open(file_path, "rb") as file:
+        file_contents = file.read()
+        multipart_form_data[file_path] = (file_name, file_contents)
 
-      if batch_count == 0:
-          res = put_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
-      else:
-          res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+        if len(files["regular_files"]) == 0 and idx == 0:
+            res = put_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+        else:
+            res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
 
-      res.raise_for_status()
-      
-      uploaded = end_batch if end_batch < len(files) else len(files)
-      logging.info(f"Uploaded {uploaded}/{len(files)} files")
+        res.raise_for_status()
+
+        logging.info(f"Uploaded {idx+1}/{len(files['large_files'])} large files")
+
 
 def batch_update():
     parser = argparse.ArgumentParser(description="Knatch - knada batch")
