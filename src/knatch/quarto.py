@@ -2,7 +2,6 @@ import os
 import math
 import argparse
 import logging
-import requests
 
 from knatch import put_with_retries, patch_with_retries
 
