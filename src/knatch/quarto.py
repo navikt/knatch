@@ -49,7 +49,7 @@ def batch_upload_quarto(
     path: str = "quarto/update",
     batch_size: int = 10,
     ignore_extensions: list = [],
-) -> requests.Response:
+):
   if not os.getcwd().endswith(folder):
       os.chdir(folder)
 
@@ -76,7 +76,6 @@ def batch_upload_quarto(
         else:
             res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
 
-        _ = res
         res.raise_for_status()
 
         uploaded = end_batch if end_batch < len(files["regular_files"]) else len(files["regular_files"])
@@ -95,11 +94,10 @@ def batch_upload_quarto(
         else:
             res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
 
-        _ = res
         res.raise_for_status()
 
         logging.info(f"Uploaded {idx+1}/{len(files['large_files'])} large files")
-  return _
+  return res
 
 def batch_update():
     parser = argparse.ArgumentParser(description="Knatch - knada batch")
