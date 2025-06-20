@@ -96,7 +96,7 @@ def batch_upload_quarto(
         res.raise_for_status()
 
         logging.info(f"Uploaded {idx+1}/{len(files['large_files'])} large files")
-
+  return res
 
 def batch_update():
     parser = argparse.ArgumentParser(description="Knatch - knada batch")
