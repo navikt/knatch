@@ -2,6 +2,7 @@ import os
 import math
 import argparse
 import logging
+from urllib.parse import urlparse
 
 from knatch import put_with_retries, patch_with_retries
 
@@ -49,6 +50,9 @@ def batch_upload_quarto(
     batch_size: int = 10,
     ignore_extensions: list = [],
 ):
+  parsed_url = urlparse(host)
+  host = host if parsed_url.scheme else "https://" + host
+
   if not os.getcwd().endswith(folder):
       os.chdir(folder)
 
@@ -71,9 +75,9 @@ def batch_upload_quarto(
                 multipart_form_data[file_path] = (file_name, file_contents)
 
         if batch_count == 0:
-            res = put_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+            res = put_with_retries(f"{host}/{path}/{quarto_id}", multipart_form_data, team_token)
         else:
-            res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+            res = patch_with_retries(f"{host}/{path}/{quarto_id}", multipart_form_data, team_token)
 
         res.raise_for_status()
 
@@ -89,9 +93,9 @@ def batch_upload_quarto(
         multipart_form_data[file_path] = (file_name, file_contents)
 
         if len(files["regular_files"]) == 0 and idx == 0:
-            res = put_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+            res = put_with_retries(f"{host}/{path}/{quarto_id}", multipart_form_data, team_token)
         else:
-            res = patch_with_retries(f"https://{host}/{path}/{quarto_id}", multipart_form_data, team_token)
+            res = patch_with_retries(f"{host}/{path}/{quarto_id}", multipart_form_data, team_token)
 
         res.raise_for_status()
 
